@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vintage Photo Booth</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Special+Elite&display=swap');
+
+        .vintage-title {
+            font-family: 'Playfair Display', serif;
+        }
+
+        .vintage-text {
+            font-family: 'Special Elite', cursive;
+        }
+
+        .countdown-overlay {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(50, 30, 15, 0.9);
+            color: #FBE8A6;
+            font-size: 4rem;
+            font-weight: bold;
+            padding: 30px;
+            border: 6px double #B68D40;
+            border-radius: 10px;
+            z-index: 1000;
+            animation: fadeIn 0.5s ease-in-out alternate infinite;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0.7; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-[#FAE3C6] flex justify-center items-center min-h-screen p-6">
+
+    <div class="bg-[#603808] p-6 rounded-lg shadow-xl border-8 border-[#432818] w-full max-w-2xl text-center">
+        <h1 class="text-3xl vintage-title text-[#FBE8A6] mb-4">🎞️ Vintage Photo Booth</h1>
+
+        <!-- Webcam Video -->
+        <div class="relative w-full flex justify-center">
+            <video id="webcam" autoplay class="border-8 border-[#C08457] rounded-lg w-full max-w-md shadow-lg"></video>
+        </div>
+
+        <!-- Capture & Controls -->
+        <div class="mt-4">
+            <button id="capture" class="px-5 py-3 bg-[#A66A3D] text-[#FBE8A6] font-bold rounded-md shadow-lg vintage-text transition hover:bg-[#8A4B2C]">
+                📸 Take Photo
+            </button>
+
+            <label for="bgColor" class="ml-4 text-[#FBE8A6] font-medium vintage-text">Background:</label>
+            <input type="color" id="bgColor" class="ml-2 border-4 border-[#8A4B2C] p-1 rounded-md shadow-lg">
+        </div>
+
+        <!-- Photo Strip -->
+        <div id="photo-strip" class="mt-4 p-6 bg-[#EEE1D5] rounded-lg border-8 border-[#8A4B2C] flex flex-col items-center space-y-4">
+            <div class="photo-slot w-44 h-32 bg-[#D7B899] rounded-lg border-4 border-[#432818] shadow-lg"></div>
+            <div class="photo-slot w-44 h-32 bg-[#D7B899] rounded-lg border-4 border-[#432818] shadow-lg"></div>
+            <div class="photo-slot w-44 h-32 bg-[#D7B899] rounded-lg border-4 border-[#432818] shadow-lg"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
