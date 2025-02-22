@@ -14,16 +14,24 @@
     <div class="absolute inset-0 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg transform rotate-6 blur opacity-30"></div>
     <div class="relative bg-black rounded-lg overflow-hidden shadow-2xl">
       <video id="video" autoplay playsinline class="w-96 h-72 object-cover"></video>
-      <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2">
-        <div id="countdownDisplay" class="hidden text-6xl font-bold text-white text-center"></div>
+      <div class="absolute inset-0 flex items-center justify-center">
+        <div id="statusDisplay" class="text-6xl font-bold text-white text-center hidden"></div>
+      </div>
+      <div id="generatingOverlay" class="absolute inset-0 bg-black/80 hidden flex-col items-center justify-center">
+        <div class="animate-spin rounded-full h-16 w-16 border-4 border-white border-t-transparent"></div>
+        <p class="text-white mt-4 text-xl font-semibold">Generating...</p>
       </div>
     </div>
     <canvas id="canvas" class="hidden"></canvas>
   </div>
 
-  <button id="captureBtn" class="mt-6 px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full font-semibold transform hover:scale-105 transition-all shadow-lg">
-    Take Photo
+  <button id="startBtn" class="mt-6 px-8 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-full font-semibold transform hover:scale-105 transition-all shadow-lg">
+    Start Photo Session
   </button>
+
+  <div class="mt-4 text-white text-center">
+    <p id="sessionInfo" class="hidden">Get ready! Taking 3 photos automatically...</p>
+  </div>
 
   <div id="gallery" class="mt-8 grid grid-cols-1 gap-6 w-full max-w-4xl"></div>
 
@@ -57,15 +65,17 @@
   <script>
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
-    const captureBtn = document.getElementById('captureBtn');
+    const startBtn = document.getElementById('startBtn');
     const gallery = document.getElementById('gallery');
     const controls = document.getElementById('controls');
     const downloadBtn = document.getElementById('downloadBtn');
     const printBtn = document.getElementById('printBtn');
-    const countdownDisplay = document.getElementById('countdownDisplay');
+    const statusDisplay = document.getElementById('statusDisplay');
+    const generatingOverlay = document.getElementById('generatingOverlay');
+    const sessionInfo = document.getElementById('sessionInfo');
 
-    let captureCount = 0;
     let stream;
+    let isSessionActive = false;
 
     // Configure toastr
     toastr.options = {
@@ -83,38 +93,39 @@
       }
     }
 
-    function countdown() {
-      return new Promise((resolve) => {
-        let count = 3;
-        countdownDisplay.classList.remove('hidden');
-        
-        const interval = setInterval(() => {
-          if (count > 0) {
-            countdownDisplay.textContent = count;
-            count--;
-          } else {
-            clearInterval(interval);
-            countdownDisplay.classList.add('hidden');
-            resolve();
-          }
-        }, 1000);
-      });
+    function sleep(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    async function capturePhoto() {
-      if (captureCount >= 3) {
-        toastr.warning('You have reached the maximum number of captures.');
-        return;
-      }
+    async function countdown(number) {
+      statusDisplay.classList.remove('hidden');
+      statusDisplay.textContent = number;
+      await sleep(1000);
+    }
 
-      await countdown();
+    async function showGetReady() {
+      statusDisplay.classList.remove('hidden');
+      statusDisplay.textContent = 'Get Ready!';
+      await sleep(1500);
+    }
 
+    async function simulateGeneration() {
+      generatingOverlay.classList.remove('hidden');
+      generatingOverlay.classList.add('flex');
+      await sleep(2000);
+      generatingOverlay.classList.remove('flex');
+      generatingOverlay.classList.add('hidden');
+    }
+
+    function captureFrame() {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       context.drawImage(video, 0, 0);
-      const dataUrl = canvas.toDataURL('image/png');
-      
+      return canvas.toDataURL('image/png');
+    }
+
+    async function addPhotoToGallery(dataUrl) {
       const photoContainer = document.createElement('div');
       photoContainer.className = 'relative transform transition-all duration-1000 translate-x-full opacity-0';
       
@@ -125,21 +136,51 @@
       photoContainer.appendChild(img);
       gallery.appendChild(photoContainer);
 
-      // Trigger animation
-      setTimeout(() => {
-        photoContainer.classList.remove('translate-x-full', 'opacity-0');
-      }, 100);
+      await sleep(100);
+      photoContainer.classList.remove('translate-x-full', 'opacity-0');
+    }
 
-      captureCount++;
+    async function takePhotos() {
+      if (isSessionActive) return;
+      isSessionActive = true;
+      
+      sessionInfo.classList.remove('hidden');
+      startBtn.disabled = true;
+      startBtn.classList.add('opacity-50');
 
-      if (captureCount === 3) {
-        stream.getTracks().forEach(track => track.stop());
-        video.parentElement.classList.add('opacity-50');
-        captureBtn.disabled = true;
-        captureBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        controls.classList.remove('hidden');
-        toastr.success('Perfect! Your photos are ready!');
+      for (let i = 0; i < 3; i++) {
+        // Get Ready message
+        await showGetReady();
+        
+        // Countdown
+        await countdown(3);
+        await countdown(2);
+        await countdown(1);
+        
+        // Hide countdown
+        statusDisplay.classList.add('hidden');
+        
+        // Capture photo
+        const dataUrl = captureFrame();
+        
+        // Show generating animation
+        await simulateGeneration();
+        
+        // Add to gallery with animation
+        await addPhotoToGallery(dataUrl);
+        
+        // Pause between photos if not the last one
+        if (i < 2) {
+          await sleep(1000);
+        }
       }
+
+      // Finish session
+      stream.getTracks().forEach(track => track.stop());
+      video.parentElement.classList.add('opacity-50');
+      controls.classList.remove('hidden');
+      sessionInfo.classList.add('hidden');
+      toastr.success('All photos captured! Choose your background or download/print.');
     }
 
     function downloadPhotos() {
@@ -157,7 +198,7 @@
       toastr.success('Background updated!');
     }
 
-    captureBtn.addEventListener('click', capturePhoto);
+    startBtn.addEventListener('click', takePhotos);
     downloadBtn.addEventListener('click', downloadPhotos);
     printBtn.addEventListener('click', () => window.print());
 
